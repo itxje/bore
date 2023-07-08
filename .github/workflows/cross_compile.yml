@@ -51,7 +51,7 @@ jobs:
       - name: install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           target: ${{ matrix.target }}
           override: true
       - name: compile
@@ -76,7 +76,7 @@ jobs:
   #     - name: install toolchain
   #       uses: actions-rs/toolchain@v1
   #       with:
-  #         toolchain: stable
+  #         toolchain: nightly
   #         target: ${{ matrix.target }}
   #         override: true
   #     - name: compile
@@ -103,7 +103,7 @@ jobs:
   #     - name: install toolchain
   #       uses: actions-rs/toolchain@v1
   #       with:
-  #         toolchain: stable
+  #         toolchain: nightly
   #         target: ${{ matrix.target }}
   #         override: true
   #     - name: compile
