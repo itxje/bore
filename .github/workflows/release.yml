@@ -1,0 +1,110 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release-corss:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        include:
+          - target: mipsel-unknown-linux-musl
+            output: bore
+          - target: x86_64-unknown-linux-musl
+            output: bore
+          - target: aarch64-linux-android
+            output: bore
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo '[build]' > Cross.toml && echo 'build-std = true' >> Cross.toml
+        if: contains(matrix.target, 'android')
+      - name: install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          override: true
+      - name: compile
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+      - name: pack
+        run: |
+          mkdir -p release-${{ matrix.target }}
+          cd release-${{ matrix.target }}
+          tar -C ../target/${{ matrix.target }}/release -zcf bore-${{ matrix.target }}.tar.gz ${{ matrix.output }}
+          sha256sum bore-${{ matrix.target }}.tar.gz > bore-${{ matrix.target }}.sha256
+      - name: release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: release-${{ matrix.target }}/*
+  release-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v2
+      - name: install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          override: true
+      - name: compile
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+      - name: pack
+        run: |
+          mkdir -p release-${{ matrix.target }}
+          cd release-${{ matrix.target }}
+          tar -C ../target/${{ matrix.target }}/release/ -zcf bore-${{ matrix.target }}.tar.gz bore
+          openssl dgst -sha256 -r bore-${{ matrix.target }}.tar.gz > bore-${{ matrix.target }}.sha256
+      - name: release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: release-${{ matrix.target }}/*
+  release-apple:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v2
+      - name: install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          override: true
+      - name: compile
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+      - name: pack
+        run: |
+          mkdir -p release-${{ matrix.target }}
+          cd release-${{ matrix.target }}
+          tar -C ../target/${{ matrix.target }}/release/ -zcf bore-${{ matrix.target }}.tar.gz bore
+          shasum -a 256 bore-${{ matrix.target }}.tar.gz > bore-${{ matrix.target }}.sha256
+      - name: release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: release-${{ matrix.target }}/*
